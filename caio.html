@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FloraGIS — Inventário Florestal</title>
+
+<!-- MAPA -->
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<!-- ÍCONES -->
+<link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<!-- XLSX -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+
+<!-- PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- KMZ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+*{
+    box-sizing:border-box;
+    margin:0;
+    padding:0;
+    font-family:Arial,Helvetica,sans-serif;
+}
+
+body{
+    background:#f1f5f2;
+    color:#17251b;
+}
+
+header{
+    height:64px;
+    background:#125c36;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 22px;
+    position:sticky;
+    top:0;
+    z-index:1000;
+}
+
+.logo{
+    font-size:21px;
+    font-weight:bold;
+}
+
+.logo i{
+    margin-right:8px;
+}
+
+.header-right{
+    display:flex;
+    gap:8px;
+    align-items:center;
+}
+
+.btn{
+    border:0;
+    border-radius:8px;
+    padding:10px 14px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn-primary{
+    background:#1c8c50;
+    color:white;
+}
+
+.btn-secondary{
+    background:#e7eee9;
+    color:#164c2d;
+}
+
+.btn-danger{
+    background:#d63b3b;
+    color:white;
+}
+
+.btn-warning{
+    background:#e9a62b;
+    color:white;
+}
+
+.layout{
+    display:flex;
+    min-height:calc(100vh - 64px);
+}
+
+.sidebar{
+    width:245px;
+    background:#103f27;
+    color:white;
+    padding:18px 10px;
+}
+
+.sidebar button{
+    width:100%;
+    border:0;
+    background:transparent;
+    color:white;
+    padding:13px;
+    text-align:left;
+    border-radius:8px;
+    margin-bottom:5px;
+    cursor:pointer;
+    font-size:14px;
+}
+
+.sidebar button:hover,
+.sidebar button.active{
+    background:#1c7043;
+}
+
+.sidebar i{
+    width:25px;
+}
+
+main{
+    flex:1;
+    padding:20px;
+    overflow:auto;
+}
+
+.page{
+    display:none;
+}
+
+.page.active{
+    display:block;
+}
+
+h1{
+    margin-bottom:5px;
+}
+
+.subtitle{
+    color:#68766d;
+    margin-bottom:20px;
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+    margin-bottom:20px;
+}
+
+.card{
+    background:white;
+    border-radius:12px;
+    padding:18px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+
+.card .icon{
+    width:42px;
+    height:42px;
+    border-radius:10px;
+    background:#e0f1e6;
+    color:#14733e;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:20px;
+    margin-bottom:10px;
+}
+
+.card strong{
+    font-size:27px;
+    display:block;
+}
+
+.card small{
+    color:#68766d;
+}
+
+.panel{
+    background:white;
+    border-radius:12px;
+    padding:18px;
+    margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.panel-title{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:15px;
+}
+
+.grid{
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:15px;
+}
+
+.grid-3{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:15px;
+}
+
+.form-group{
+    margin-bottom:13px;
+}
+
+label{
+    display:block;
+    font-size:13px;
+    font-weight:bold;
+    margin-bottom:6px;
+}
+
+input,select,textarea{
+    width:100%;
+    padding:11px;
+    border:1px solid #ccd6cf;
+    border-radius:7px;
+    outline:none;
+}
+
+textarea{
+    min-height:100px;
+    resize:vertical;
+}
+
+input:focus,select:focus,textarea:focus{
+    border-color:#1d8149;
+}
+
+.actions{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+#map{
+    height:500px;
+    border-radius:10px;
+}
+
+.table-wrapper{
+    overflow:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:700px;
+}
+
+th,td{
+    border-bottom:1px solid #e2e8e4;
+    padding:10px;
+    text-align:left;
+    font-size:13px;
+}
+
+th{
+    background:#edf5ef;
+}
+
+.badge{
+    background:#dcefe2;
+    color:#146235;
+    padding:4px 8px;
+    border-radius:20px;
+    font-size:11px;
+}
+
+.stat-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+.stat{
+    background:#f4f8f5;
+    padding:14px;
+    border-radius:8px;
+}
+
+.stat strong{
+    font-size:20px;
+    display:block;
+}
+
+.progress{
+    background:#e3e9e5;
+    height:8px;
+    border-radius:10px;
+    overflow:hidden;
+}
+
+.progress div{
+    height:100%;
+    background:#18844a;
+}
+
+.file-box{
+    border:2px dashed #b8c8bd;
+    padding:25px;
+    text-align:center;
+    border-radius:10px;
+}
+
+.toast{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    background:#173e28;
+    color:white;
+    padding:14px 18px;
+    border-radius:8px;
+    display:none;
+    z-index:3000;
+}
+
+.empty{
+    padding:30px;
+    text-align:center;
+    color:#768279;
+}
+
+.modal{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.5);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:2000;
+}
+
+.modal-content{
+    background:white;
+    width:min(600px,92%);
+    max-height:90vh;
+    overflow:auto;
+    border-radius:12px;
+    padding:20px;
+}
+
+.modal-header{
+    display:flex;
+    justify-content:space-between;
+    margin-bottom:15px;
+}
+
+.close{
+    cursor:pointer;
+    font-size:22px;
+}
+
+@media(max-width:1000px){
+    .cards{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .sidebar{
+        width:70px;
+    }
+
+    .sidebar span{
+        display:none;
+    }
+
+    .sidebar button{
+        text-align:center;
+    }
+
+    .sidebar i{
+        width:auto;
+    }
+}
+
+@media(max-width:650px){
+    header{
+        padding:0 12px;
+    }
+
+    .cards,
+    .grid,
+    .grid-3,
+    .stat-grid{
+        grid-template-columns:1fr;
+    }
+
+    main{
+        padding:12px;
+    }
+
+    .sidebar{
+        position:fixed;
+        bottom:0;
+        left:0;
+        right:0;
+        width:100%;
+        height:58px;
+        padding:4px;
+        display:flex;
+        z-index:1500;
+    }
+
+    .sidebar button{
+        flex:1;
+        text-align:center;
+        padding:8px 2px;
+        margin:0;
+    }
+
+    .sidebar span{
+        display:block;
+        font-size:9px;
+        margin-top:2px;
+    }
+
+    .layout{
+        padding-bottom:55px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <div class="logo">
+        <i class="fa-solid fa-tree"></i>
+        FloraGIS
+    </div>
+
+    <div class="header-right">
+        <button class="btn btn-secondary" onclick="backupDados()">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            Backup
+        </button>
+
+        <button class="btn btn-primary" onclick="abrirPagina('coleta')">
+            <i class="fa-solid fa-plus"></i>
+            Nova coleta
+        </button>
+    </div>
+</header>
+
+<div class="layout">
+
+<aside class="sidebar">
+
+<button class="active" onclick="abrirPagina('dashboard',this)">
+<i class="fa-solid fa-chart-line"></i>
+<span>Dashboard</span>
+</button>
+
+<button onclick="abrirPagina('projeto',this)">
+<i class="fa-solid fa-folder"></i>
+<span>Projeto</span>
+</button>
+
+<button onclick="abrirPagina('coleta',this)">
+<i class="fa-solid fa-tree"></i>
+<span>Coleta</span>
+</button>
+
+<button onclick="abrirPagina('parcelas',this)">
+<i class="fa-solid fa-location-dot"></i>
+<span>Parcelas</span>
+</button>
+
+<button onclick="abrirPagina('mapa',this)">
+<i class="fa-solid fa-map"></i>
+<span>Mapa</span>
+</button>
+
+<button onclick="abrirPagina('analise',this)">
+<i class="fa-solid fa-chart-column"></i>
+<span>Análises</span>
+</button>
+
+<button onclick="abrirPagina('arquivos',this)">
+<i class="fa-solid fa-file"></i>
+<span>Arquivos</span>
+</button>
+
+<button onclick="abrirPagina('relatorios',this)">
+<i class="fa-solid fa-file-pdf"></i>
+<span>Relatórios</span>
+</button>
+
+</aside>
+
+<main>
+
+<!-- DASHBOARD -->
+
+<section id="dashboard" class="page active">
+
+<h1>Dashboard</h1>
+<p class="subtitle">Painel geral do inventário florestal.</p>
+
+<div class="cards">
+
+<div class="card">
+<div class="icon"><i class="fa-solid fa-tree"></i></div>
+<strong id="totalIndividuos">0</strong>
+<small>Indivíduos</small>
+</div>
+
+<div class="card">
+<div class="icon"><i class="fa-solid fa-seedling"></i></div>
+<strong id="totalEspecies">0</strong>
+<small>Espécies</small>
+</div>
+
+<div class="card">
+<div class="icon"><i class="fa-solid fa-layer-group"></i></div>
+<strong id="totalFamilias">0</strong>
+<small>Famílias</small>
+</div>
+
+<div class="card">
+<div class="icon"><i class="fa-solid fa-ruler-combined"></i></div>
+<strong id="volumeTotal">0</strong>
+<small>Volume estimado (m³)</small>
+</div>
+
+</div>
+
+<div class="grid">
+
+<div class="panel">
+<div class="panel-title">
+<h3>Resumo do inventário</h3>
+</div>
+
+<div class="stat-grid">
+
+<div class="stat">
+<small>Parcelas</small>
+<strong id="dashParcelas">0</strong>
+</div>
+
+<div class="stat">
+<small>Área inventariada</small>
+<strong id="areaInventariada">0 ha</strong>
+</div>
+
+<div class="stat">
+<small>Densidade</small>
+<strong id="densidade">0 ind/ha</strong>
+</div>
+
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-title">
+<h3>Projeto atual</h3>
+</div>
+
+<div id="projetoResumo">
+Nenhum projeto cadastrado.
+</div>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- PROJETO -->
+
+<section id="projeto" class="page">
+
+<h1>Projeto</h1>
+<p class="subtitle">Configuração do inventário.</p>
+
+<div class="panel">
+
+<div class="grid">
+
+<div class="form-group">
+<label>Nome do projeto</label>
+<input id="nomeProjeto" placeholder="Ex.: Inventário Fazenda Boa Vista">
+</div>
+
+<div class="form-group">
+<label>Responsável técnico</label>
+<input id="responsavel" placeholder="Nome do responsável">
+</div>
+
+<div class="form-group">
+<label>Propriedade</label>
+<input id="propriedade" placeholder="Nome da propriedade">
+</div>
+
+<div class="form-group">
+<label>Município</label>
+<input id="municipio" placeholder="Município / UF">
+</div>
+
+<div class="form-group">
+<label>Área total (ha)</label>
+<input id="areaTotal" type="number" step="0.01">
+</div>
+
+<div class="form-group">
+<label>Tipo de inventário</label>
+
+<select id="tipoInventario">
+<option>Amostragem</option>
+<option>Censo florestal</option>
+<option>Inventário fitossociológico</option>
+<option>Inventário para manejo</option>
+<option>Levantamento ambiental</option>
+</select>
+
+</div>
+
+</div>
+
+<button class="btn btn-primary" onclick="salvarProjeto()">
+<i class="fa-solid fa-save"></i>
+Salvar projeto
+</button>
+
+</div>
+
+</section>
+
+
+<!-- COLETA -->
+
+<section id="coleta" class="page">
+
+<h1>Coleta de dados</h1>
+<p class="subtitle">Cadastre indivíduos arbóreos e dados dendrométricos.</p>
+
+<div class="panel">
+
+<div class="grid">
+
+<div class="form-group">
+<label>Parcela</label>
+<input id="cParcela" placeholder="Ex.: P01">
+</div>
+
+<div class="form-group">
+<label>Número do indivíduo</label>
+<input id="cNumero" placeholder="Ex.: 001">
+</div>
+
+<div class="form-group">
+<label>Nome popular</label>
+<input id="cPopular" placeholder="Ex.: Jatobá">
+</div>
+
+<div class="form-group">
+<label>Nome científico</label>
+<input id="cCientifico" placeholder="Ex.: Hymenaea courbaril">
+</div>
+
+<div class="form-group">
+<label>Família botânica</label>
+<input id="cFamilia" placeholder="Ex.: Fabaceae">
+</div>
+
+<div class="form-group">
+<label>DAP (cm)</label>
+<input id="cDAP" type="number" step="0.01">
+</div>
+
+<div class="form-group">
+<label>Altura (m)</label>
+<input id="cAltura" type="number" step="0.01">
+</div>
+
+<div class="form-group">
+<label>Coordenada Latitude</label>
+<input id="cLat" readonly>
+</div>
+
+<div class="form-group">
+<label>Coordenada Longitude</label>
+<input id="cLng" readonly>
+</div>
+
+</div>
+
+<div class="actions">
+
+<button class="btn btn-primary" onclick="usarGPS()">
+<i class="fa-solid fa-location-crosshairs"></i>
+Capturar GPS
+</button>
+
+<button class="btn btn-secondary" onclick="salvarIndividuo()">
+<i class="fa-solid fa-save"></i>
+Salvar indivíduo
+</button>
+
+<button class="btn btn-warning" onclick="limparColeta()">
+Limpar
+</button>
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<div class="panel-title">
+<h3>Indivíduos cadastrados</h3>
+
+<input
+id="filtroTabela"
+placeholder="Pesquisar..."
+style="max-width:220px"
+oninput="renderTabela()">
+
+</div>
+
+<div class="table-wrapper">
+<table>
+
+<thead>
+<tr>
+<th>Parcela</th>
+<th>Nº</th>
+<th>Espécie</th>
+<th>Família</th>
+<th>DAP</th>
+<th>Altura</th>
+<th>Volume</th>
+<th>GPS</th>
+<th>Ação</th>
+</tr>
+</thead>
+
+<tbody id="tabelaIndividuos"></tbody>
+
+</table>
+</div>
+
+</div>
+
+</section>
+
+
+<!-- PARCELAS -->
+
+<section id="parcelas" class="page">
+
+<h1>Parcelas</h1>
+<p class="subtitle">Cadastro das unidades amostrais.</p>
+
+<div class="panel">
+
+<div class="grid-3">
+
+<div class="form-group">
+<label>Código da parcela</label>
+<input id="pCodigo" placeholder="P01">
+</div>
+
+<div class="form-group">
+<label>Área da parcela (m²)</label>
+<input id="pArea" type="number" value="1000">
+</div>
+
+<div class="form-group">
+<label>Latitude</label>
+<input id="pLat" readonly>
+</div>
+
+<div class="form-group">
+<label>Longitude</label>
+<input id="pLng" readonly>
+</div>
+
+</div>
+
+<div class="actions">
+
+<button class="btn btn-primary" onclick="gpsParcela()">
+<i class="fa-solid fa-location-crosshairs"></i>
+GPS
+</button>
+
+<button class="btn btn-primary" onclick="salvarParcela()">
+Salvar parcela
+</button>
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<div class="table-wrapper">
+
+<table>
+
+<thead>
+<tr>
+<th>Código</th>
+<th>Área</th>
+<th>Latitude</th>
+<th>Longitude</th>
+<th>Indivíduos</th>
+<th>Ação</th>
+</tr>
+</thead>
+
+<tbody id="tabelaParcelas"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- MAPA -->
+
+<section id="mapa" class="page">
+
+<h1>Mapa</h1>
+<p class="subtitle">Visualização das parcelas e indivíduos georreferenciados.</p>
+
+<div class="panel">
+
+<div class="actions" style="margin-bottom:12px">
+
+<button class="btn btn-primary" onclick="centralizarGPS()">
+<i class="fa-solid fa-location-crosshairs"></i>
+Minha posição
+</button>
+
+<button class="btn btn-secondary" onclick="exportarKML()">
+Exportar KML
+</button>
+
+</div>
+
+<div id="map"></div>
+
+</div>
+
+</section>
+
+
+<!-- ANÁLISES -->
+
+<section id="analise" class="page">
+
+<h1>Análises</h1>
+<p class="subtitle">Processamento estatístico e fitossociológico.</p>
+
+<div class="panel">
+
+<div class="panel-title">
+<h3>Resumo estatístico</h3>
+
+<button class="btn btn-primary" onclick="calcularAnalise()">
+Calcular
+</button>
+
+</div>
+
+<div class="stat-grid">
+
+<div class="stat">
+<small>Área basal total</small>
+<strong id="areaBasal">0 m²</strong>
+</div>
+
+<div class="stat">
+<small>Volume total</small>
+<strong id="analiseVolume">0 m³</strong>
+</div>
+
+<div class="stat">
+<small>Diâmetro médio</small>
+<strong id="dapMedio">0 cm</strong>
+</div>
+
+<div class="stat">
+<small>Altura média</small>
+<strong id="alturaMedia">0 m</strong>
+</div>
+
+<div class="stat">
+<small>Densidade</small>
+<strong id="analiseDensidade">0 ind/ha</strong>
+</div>
+
+<div class="stat">
+<small>Riqueza</small>
+<strong id="riqueza">0 espécies</strong>
+</div>
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<h3 style="margin-bottom:15px">
+Estrutura fitossociológica
+</h3>
+
+<div class="table-wrapper">
+
+<table>
+
+<thead>
+
+<tr>
+<th>Espécie</th>
+<th>Família</th>
+<th>N</th>
+<th>DA</th>
+<th>DR %</th>
+<th>Dominância</th>
+<th>Freq.</th>
+</tr>
+
+</thead>
+
+<tbody id="tabelaFitossociologia"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- ARQUIVOS -->
+
+<section id="arquivos" class="page">
+
+<h1>Arquivos</h1>
+<p class="subtitle">Importação e exportação de dados espaciais.</p>
+
+<div class="panel">
+
+<div class="file-box">
+
+<i class="fa-solid fa-file-import"
+style="font-size:40px;color:#168046"></i>
+
+<h3 style="margin:12px">
+Importar KML / KMZ
+</h3>
+
+<p style="margin-bottom:15px;color:#66736a">
+Importe arquivos de campo ou mapas de projetos anteriores.
+</p>
+
+<input
+type="file"
+id="arquivoKML"
+accept=".kml,.kmz"
+onchange="importarArquivo(event)">
+
+</div>
+
+</div>
+
+<div class="panel">
+
+<h3>Exportação</h3>
+
+<div class="actions" style="margin-top:15px">
+
+<button class="btn btn-primary" onclick="exportarCSV()">
+<i class="fa-solid fa-file-excel"></i>
+Exportar Excel
+</button>
+
+<button class="btn btn-secondary" onclick="exportarKML()">
+<i class="fa-solid fa-map"></i>
+Exportar KML
+</button>
+
+<button class="btn btn-warning" onclick="backupDados()">
+<i class="fa-solid fa-database"></i>
+Backup JSON
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+
+<!-- RELATÓRIOS -->
+
+<section id="relatorios" class="page">
+
+<h1>Relatórios técnicos</h1>
+<p class="subtitle">Geração de documentos do inventário.</p>
+
+<div class="panel">
+
+<h3>Relatório técnico</h3>
+
+<div class="form-group" style="margin-top:15px">
+<label>Observações</label>
+<textarea id="observacoes"
+placeholder="Digite observações técnicas, metodologia, condições de campo etc."></textarea>
+</div>
+
+<div class="actions">
+
+<button class="btn btn-primary" onclick="gerarPDF()">
+<i class="fa-solid fa-file-pdf"></i>
+Gerar PDF
+</button>
+
+<button class="btn btn-secondary" onclick="exportarCSV()">
+<i class="fa-solid fa-file-excel"></i>
+Gerar Excel
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+</main>
+</div>
+
+
+<div id="toast" class="toast"></div>
+
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+
+/* =========================================================
+   BANCO LOCAL
+========================================================= */
+
+let dados = JSON.parse(localStorage.getItem("floraGIS")) || {
+
+projeto:{},
+
+individuos:[],
+
+parcelas:[]
+
+};
+
+function salvarBanco(){
+
+localStorage.setItem(
+"floraGIS",
+JSON.stringify(dados)
+);
+
+atualizarDashboard();
+
+}
+
+
+/* =========================================================
+   NAVEGAÇÃO
+========================================================= */
+
+function abrirPagina(id,btn){
+
+document.querySelectorAll(".page")
+.forEach(p=>p.classList.remove("active"));
+
+document.getElementById(id)
+.classList.add("active");
+
+document.querySelectorAll(".sidebar button")
+.forEach(b=>b.classList.remove("active"));
+
+if(btn) btn.classList.add("active");
+
+if(id==="mapa"){
+
+setTimeout(()=>{
+
+if(!mapa){
+iniciarMapa();
+}else{
+mapa.invalidateSize();
+}
+
+renderMapa();
+
+},100);
+
+}
+
+if(id==="analise"){
+calcularAnalise();
+}
+
+}
+
+
+/* =========================================================
+   TOAST
+========================================================= */
+
+function toast(msg){
+
+const el=document.getElementById("toast");
+
+el.innerText=msg;
+el.style.display="block";
+
+setTimeout(()=>{
+el.style.display="none";
+},2500);
+
+}
+
+
+/* =========================================================
+   PROJETO
+========================================================= */
+
+function salvarProjeto(){
+
+dados.projeto={
+
+nome:document.getElementById("nomeProjeto").value,
+
+responsavel:
+document.getElementById("responsavel").value,
+
+propriedade:
+document.getElementById("propriedade").value,
+
+municipio:
+document.getElementById("municipio").value,
+
+area:
+parseFloat(document.getElementById("areaTotal").value)||0,
+
+tipo:
+document.getElementById("tipoInventario").value
+
+};
+
+salvarBanco();
+
+toast("Projeto salvo com sucesso.");
+
+mostrarProjeto();
+
+}
+
+
+function carregarProjeto(){
+
+const p=dados.projeto;
+
+if(!p) return;
+
+document.getElementById("nomeProjeto").value=p.nome||"";
+document.getElementById("responsavel").value=p.responsavel||"";
+document.getElementById("propriedade").value=p.propriedade||"";
+document.getElementById("municipio").value=p.municipio||"";
+document.getElementById("areaTotal").value=p.area||"";
+document.getElementById("tipoInventario").value=p.tipo||"Amostragem";
+
+mostrarProjeto();
+
+}
+
+
+function mostrarProjeto(){
+
+const p=dados.projeto;
+
+const el=document.getElementById("projetoResumo");
+
+if(!p.nome){
+
+el.innerHTML="Nenhum projeto cadastrado.";
+
+return;
+
+}
+
+el.innerHTML=`
+
+<strong>${esc(p.nome)}</strong><br>
+
+Responsável: ${esc(p.responsavel||"-")}<br>
+
+Propriedade: ${esc(p.propriedade||"-")}<br>
+
+Município: ${esc(p.municipio||"-")}<br>
+
+Área: ${p.area||0} ha<br>
+
+Tipo: ${esc(p.tipo||"-")}
+
+`;
+
+}
+
+
+/* =========================================================
+   GPS
+========================================================= */
+
+function obterGPS(callback){
+
+if(!navigator.geolocation)
+
+  
+
